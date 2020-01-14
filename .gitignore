@@ -1,2 +1,3 @@
-172.30.*/
-*.ini
+.idea
+venv
+*.yml

@@ -1,38 +1,42 @@
 #!/usr/bin/python3
+import os.path
+import yaml
 from ftplib import FTP
-from os.path import isfile, join, getsize
 
 
-def addresses_list(file_name):
-    """Возвращает список IP-адресов"""
-    with open(file_name) as ip_list:
-        for string in ip_list:
-            string_list = string.strip().split()
-            addresses.append(string_list[0])
+def load_settings(file_name: str) -> tuple:
+    """Return dict of settings"""
+    try:
+        with open('get_ftp_jipg.yml') as f:
+            settings = yaml.safe_load(f)
+    except FileNotFoundError:
+        settings = {'path': '~', 'addresses': {'127.0.0.1': 'localhost'}}
+    return settings['addresses'], settings['path']
 
-def download_file(address):
-    """Скачивание или обновление файла"""
-    print('Connecting to ' + address + '.')
+
+def download_files(address: str, path: str):
+    """Download or update a file"""
+    ftp = FTP()
+    print('Connecting to ' + address)
     try:
         ftp.connect(address, 2121)
     except OSError:
-        print('Network is unreachable.')
+        print('Network is unreachable')
     else:
         ftp.login('monitor', 'usermon')
         files = ftp.nlst()
         for file in files:
             if len(file) > 4 and file[-5:] == '.jipg':
-                if not isfile(join(address, file)):
-                    print('Download new file ' + file + '.')
-                    ftp.retrbinary('RETR ' + file, open(join(address, file), 'wb').write)
-                elif ftp.size(file) > getsize(join(address, file)):
-                    print('Update file ' + file + '.')
-                    ftp.retrbinary('RETR ' + file, open(join(address, file), 'wb').write)
+                if not os.path.isfile(os.path.join(path, address, file)):
+                    print('Download new file ' + file)
+                    ftp.retrbinary('RETR ' + file, open(os.path.join(path, address, file), 'wb').write)
+                elif ftp.size(file) > os.path.getsize(os.path.join(path, address, file)):
+                    print('Update file ' + file)
+                    ftp.retrbinary('RETR ' + file, open(os.path.join(path, address, file), 'wb').write)
         ftp.quit()
 
 
-addresses = []
-addresses_list('get_ftp_jipg.ini')
-ftp = FTP()
-for ip_address in addresses:
-    download_file(ip_address)
+if __name__ == "__main__":
+    ip, path = load_settings('get_ftp_jipg.yml')
+    for address in ip.keys():
+        download_files(address, path)
