@@ -1,16 +1,17 @@
 #!/usr/bin/python3
 import os.path
-import yaml
 from ftplib import FTP
 
+import yaml
 
-def load_settings(file_name: str) -> tuple:
-    """Return dict of settings"""
+
+def load_settings(file: str) -> tuple:
+    """Return dict ip addresses and path string from settings"""
     try:
-        with open('get_ftp_jipg.yml') as f:
+        with open(file) as f:
             settings = yaml.safe_load(f)
     except FileNotFoundError:
-        settings = {'path': '~', 'addresses': {'127.0.0.1': 'localhost'}}
+        settings = {'addresses': {'127.0.0.1': 'localhost'}, 'path': '~'}
     return settings['addresses'], settings['path']
 
 
@@ -26,17 +27,19 @@ def download_files(address: str, path: str):
         ftp.login('monitor', 'usermon')
         files = ftp.nlst()
         for file in files:
-            if len(file) > 4 and file[-5:] == '.jipg':
-                if not os.path.isfile(os.path.join(path, address, file)):
+            if file.endswith('.jipg'):
+                file_location = os.path.join(path, address, file)
+                if not os.path.isfile(file_location):
                     print('Download new file ' + file)
-                    ftp.retrbinary('RETR ' + file, open(os.path.join(path, address, file), 'wb').write)
-                elif ftp.size(file) > os.path.getsize(os.path.join(path, address, file)):
+                    ftp.retrbinary('RETR ' + file, open(file_location, 'wb').write)
+                elif ftp.size(file) > os.path.getsize(file_location):
                     print('Update file ' + file)
-                    ftp.retrbinary('RETR ' + file, open(os.path.join(path, address, file), 'wb').write)
+                    ftp.retrbinary('RETR ' + file, open(file_location, 'wb').write)
         ftp.quit()
 
 
 if __name__ == "__main__":
-    ip, path = load_settings('get_ftp_jipg.yml')
-    for address in ip.keys():
-        download_files(address, path)
+    file_settings = 'get_ftp_jipg.yml'
+    ip, data_path = load_settings(file_settings)
+    for ip_address in ip.keys():
+        download_files(ip_address, data_path)
